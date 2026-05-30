@@ -1,0 +1,89 @@
+services:
+  db:
+    image: postgres:15
+    container_name: invoice-db
+    environment:
+      POSTGRES_DB: invoicedb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: ./invoice-management-server
+    container_name: invoice-app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/invoicedb
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      PROCESSING_MODE: normal
+      PROCESSING_FAILURE_RATE: "0.2"
+      SERVER_PORT: "8080"
+    ports:
+      - "8080:8080"
+    volumes:
+      - applogs:/app/logs
+
+  frontend:
+    build: ./invoice-management-frontend
+    container_name: invoice-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - app
+
+  incident-db:
+    image: postgres:15
+    container_name: incident-db
+    environment:
+      POSTGRES_DB: incidentdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - incident-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  incident-app:
+    build: ./incident-management-server
+    container_name: incident-app
+    depends_on:
+      incident-db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://incident-db:5432/incidentdb
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SERVER_PORT: "8081"
+      JWT_SECRET: "skXk7VOMWvDXN20KVJSxOVBTmKRkGtjixw5XxSLFjca"
+      JWT_EXPIRATION_MS: "86400000"
+    ports:
+      - "8081:8081"
+
+  incident-frontend:
+    build: ./incident-management-frontend
+    container_name: incident-frontend
+    ports:
+      - "3001:80"
+    depends_on:
+      - incident-app
+
+volumes:
+  pgdata:
+  applogs:
+  incident-pgdata:
