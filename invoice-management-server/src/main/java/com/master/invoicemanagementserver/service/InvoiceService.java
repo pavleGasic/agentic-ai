@@ -3,11 +3,13 @@ package com.master.invoicemanagementserver.service;
 import com.master.invoicemanagementserver.dto.InvoiceDTO;
 import com.master.invoicemanagementserver.dto.InvoiceRowDTO;
 import com.master.invoicemanagementserver.dto.UploadResponseDTO;
+import com.master.invoicemanagementserver.entity.BatchUpload;
 import com.master.invoicemanagementserver.entity.Invoice;
 import com.master.invoicemanagementserver.entity.InvoiceStatus;
 import com.master.invoicemanagementserver.entity.Vendor;
 import com.master.invoicemanagementserver.exception.InvoiceNotFoundException;
 import com.master.invoicemanagementserver.exception.InvoiceValidationException;
+import com.master.invoicemanagementserver.repository.BatchUploadRepository;
 import com.master.invoicemanagementserver.repository.InvoiceRepository;
 import com.master.invoicemanagementserver.repository.VendorRepository;
 import com.master.invoicemanagementserver.util.CsvParser;
@@ -19,8 +21,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,13 +35,19 @@ public class InvoiceService {
     private final InvoiceRepository invoiceRepository;
     private final VendorRepository vendorRepository;
     private final ProcessingService processingService;
+    private final BatchUploadRepository batchUploadRepository;
+    private final CsvParser csvParser;
 
     public InvoiceService(InvoiceRepository invoiceRepository,
                           VendorRepository vendorRepository,
-                          ProcessingService processingService) {
+                          ProcessingService processingService,
+                          BatchUploadRepository batchUploadRepository,
+                          CsvParser csvParser) {
         this.invoiceRepository = invoiceRepository;
         this.vendorRepository = vendorRepository;
         this.processingService = processingService;
+        this.batchUploadRepository = batchUploadRepository;
+        this.csvParser = csvParser;
     }
 
     public UploadResponseDTO uploadInvoices(MultipartFile file) {
@@ -45,9 +55,16 @@ public class InvoiceService {
             throw new InvoiceValidationException("Uploaded file is empty");
         }
 
-        log.info("Starting CSV upload: filename={}, size={}", file.getOriginalFilename(), file.getSize());
+        var batchUpload = new BatchUpload();
+        var uploadId = UUID.randomUUID();
+        var fileName = file.getOriginalFilename();
+        batchUpload.setId(uploadId);
+        batchUpload.setStartDate(LocalDateTime.now());
+        batchUpload.setImportFileName(fileName);
+        MDC.put("fileName", fileName);
+        log.info("Starting CSV upload: filename={}, size={}", fileName, file.getSize());
 
-        CsvParser.ParseResult parseResult = CsvParser.parse(file);
+        var parseResult = csvParser.parse(file, batchUpload);
         List<String> errors = new ArrayList<>();
         for (String parseError : parseResult.errors()) {
             log.warn("CSV parse error: {}", parseError);
@@ -64,18 +81,22 @@ public class InvoiceService {
                     continue;
                 }
 
-                Vendor vendor = vendorRepository.findByVendorCode(row.getVendorCode()).orElse(null);
+                var invoice = toEntity(row);
+
+                var vendor = vendorRepository.findByVendorCode(row.getVendorCode()).orElse(null);
                 if (vendor == null) {
                     errors.add("One or more invoices could not be processed. Please contact support.");
                     log.warn("Invoice {} rejected — vendor not found: {}", row.getInvoiceId(), row.getVendorCode());
+                    invoice.setStatus(InvoiceStatus.FAILED);
+                    invoiceRepository.save(invoice);
                     continue;
                 }
 
-                Invoice invoice = toEntity(row, vendor);
+                invoice.setVendor(vendor);
                 invoiceRepository.save(invoice);
                 log.info("Invoice saved as PENDING: {}", invoice.getInvoiceId());
 
-                processingService.processInvoiceAsync(invoice);
+                processingService.processInvoiceAsync(batchUpload, invoice);
                 successCount++;
             } catch (Exception e) {
                 errors.add("One or more invoices could not be processed. Please contact support.");
@@ -86,6 +107,10 @@ public class InvoiceService {
         }
 
         int total = parseResult.validRows().size() + parseResult.errors().size();
+        batchUpload.setImportedInvoices(total - errors.size());
+        batchUpload.setErrorInvoices(errors.size());
+        batchUpload.setEndTime(LocalDateTime.now());
+        batchUploadRepository.save(batchUpload);
         log.info("Upload complete: total={}, accepted={}, errors={}", total, successCount, errors.size());
         return new UploadResponseDTO(total, successCount, errors.size(), errors);
     }
@@ -116,15 +141,14 @@ public class InvoiceService {
                 .stream().map(InvoiceDTO::from).collect(Collectors.toList());
     }
 
-    private Invoice toEntity(InvoiceRowDTO row, Vendor vendor) {
-        Invoice invoice = new Invoice();
+    private Invoice toEntity(InvoiceRowDTO row) {
+        var invoice = new Invoice();
         invoice.setInvoiceId(row.getInvoiceId());
         invoice.setCustomerName(row.getCustomerName());
         invoice.setAmount(new BigDecimal(row.getAmount()));
         invoice.setCurrency(row.getCurrency().toUpperCase());
         invoice.setIssueDate(LocalDate.parse(row.getIssueDate()));
         invoice.setStatus(InvoiceStatus.PENDING);
-        invoice.setVendor(vendor);
         return invoice;
     }
 }

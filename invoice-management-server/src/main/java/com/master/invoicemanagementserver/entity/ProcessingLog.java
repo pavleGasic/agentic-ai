@@ -28,7 +28,7 @@ public class ProcessingLog {
 
     private String endpoint;
 
-    private String requestId;
+    private String batchUploadId;
 
     @Column(columnDefinition = "TEXT", nullable = false)
     private String message;

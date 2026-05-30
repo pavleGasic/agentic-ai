@@ -1,6 +1,7 @@
 package com.master.invoicemanagementserver.service;
 
 import com.master.invoicemanagementserver.config.ProcessingConfig;
+import com.master.invoicemanagementserver.entity.BatchUpload;
 import com.master.invoicemanagementserver.entity.Invoice;
 import com.master.invoicemanagementserver.entity.InvoiceStatus;
 import com.master.invoicemanagementserver.entity.ProcessingLog;
@@ -19,7 +20,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Random;
-import java.util.UUID;
 
 @Service
 public class ProcessingService {
@@ -40,14 +40,12 @@ public class ProcessingService {
     }
 
     @Async
-    public void processInvoiceAsync(Invoice invoice) {
-        String requestId = UUID.randomUUID().toString();
-        MDC.put("requestId", requestId);
+    public void processInvoiceAsync(BatchUpload batchUpload, Invoice invoice) {
+        MDC.put("batch_upload_id", batchUpload.getId().toString());
         MDC.put("invoiceId", invoice.getInvoiceId());
         MDC.put("module", "ProcessingService");
         MDC.put("endpoint", "/invoices/upload");
 
-        persistLog(invoice.getInvoiceId(), "INFO", "ProcessingService", "Processing started for invoice", null, requestId);
         log.info("Processing started for invoice: {}", invoice.getInvoiceId());
 
         try {
@@ -64,7 +62,7 @@ public class ProcessingService {
                 Thread.sleep(50 + random.nextInt(100));
             }
 
-            BigDecimal amount = invoice.getAmount();
+            var amount = invoice.getAmount();
             if (amount.compareTo(new BigDecimal("1000")) >= 0
                     && amount.compareTo(new BigDecimal("2000")) < 0
                     && random.nextDouble() < processingConfig.getFailureRate()) {
@@ -74,14 +72,14 @@ public class ProcessingService {
             invoice.setStatus(InvoiceStatus.PROCESSED);
             invoice.setProcessedAt(LocalDateTime.now());
             invoiceRepository.save(invoice);
-            persistLog(invoice.getInvoiceId(), "INFO", "ProcessingService", "Processing completed successfully", null, requestId);
+            persistLog(invoice.getInvoiceId(), batchUpload.getId().toString(), "INFO", "Processing completed successfully", null);
             log.info("Invoice {} status updated to FAILED", invoice.getInvoiceId());
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            handleFailure(invoice, e, requestId, "Processing interrupted");
+            handleFailure(invoice, batchUpload.getId().toString(), e, "Processing interrupted");
         } catch (Exception e) {
-            handleFailure(invoice, e, requestId, "Processing failed: " + e.getMessage());
+            handleFailure(invoice, batchUpload.getId().toString(), e, "Processing failed: " + e.getMessage());
         } finally {
             MDC.remove("invoiceId");
             MDC.remove("module");
@@ -89,12 +87,12 @@ public class ProcessingService {
         }
     }
 
-    private void handleFailure(Invoice invoice, Exception e, String requestId, String message) {
-        String stackTrace = stackTraceToString(e);
+    private void handleFailure(Invoice invoice, String batchUploadId, Exception e, String message) {
+        var stackTrace = stackTraceToString(e);
         log.error("Processing failed for invoice {}: {}", invoice.getInvoiceId(), e.getMessage(), e);
-        persistLog(invoice.getInvoiceId(), "ERROR", "ProcessingService", message, stackTrace, requestId);
+        persistLog(invoice.getInvoiceId(), batchUploadId, "ERROR", message, stackTrace);
         try {
-            Invoice fresh = invoiceRepository.findById(invoice.getId()).orElse(invoice);
+            var fresh = invoiceRepository.findById(invoice.getId()).orElse(invoice);
             fresh.setStatus(InvoiceStatus.FAILED);
             fresh.setErrorMessage(message);
             fresh.setProcessedAt(LocalDateTime.now());
@@ -104,14 +102,14 @@ public class ProcessingService {
         }
     }
 
-    private void persistLog(String invoiceId, String level, String module, String message, String stackTrace, String requestId) {
+    private void persistLog(String invoiceId, String batchUploadId, String level, String message, String stackTrace) {
         try {
-            ProcessingLog entry = new ProcessingLog();
+            var entry = new ProcessingLog();
             entry.setInvoiceId(invoiceId);
             entry.setLevel(level);
-            entry.setModule(module);
+            entry.setModule("ProcessingService");
             entry.setEndpoint(MDC.get("endpoint") != null ? MDC.get("endpoint") : "/invoices/upload");
-            entry.setRequestId(requestId);
+            entry.setBatchUploadId(batchUploadId);
             entry.setMessage(message);
             entry.setStackTrace(stackTrace);
             entry.setTimestamp(LocalDateTime.now());
@@ -122,7 +120,7 @@ public class ProcessingService {
     }
 
     private static String stackTraceToString(Throwable t) {
-        StringWriter sw = new StringWriter();
+        var sw = new StringWriter();
         t.printStackTrace(new PrintWriter(sw));
         return sw.toString();
     }

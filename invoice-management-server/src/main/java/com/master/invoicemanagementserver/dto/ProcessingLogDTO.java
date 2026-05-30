@@ -14,7 +14,7 @@ public class ProcessingLogDTO {
     private String level;
     private String module;
     private String endpoint;
-    private String requestId;
+    private String batchUploadId;
     private String message;
     private String stackTrace;
     private LocalDateTime timestamp;
@@ -26,7 +26,7 @@ public class ProcessingLogDTO {
         dto.level = log.getLevel();
         dto.module = log.getModule();
         dto.endpoint = log.getEndpoint();
-        dto.requestId = log.getRequestId();
+        dto.batchUploadId = log.getBatchUploadId();
         dto.message = log.getMessage();
         dto.stackTrace = log.getStackTrace();
         dto.timestamp = log.getTimestamp();

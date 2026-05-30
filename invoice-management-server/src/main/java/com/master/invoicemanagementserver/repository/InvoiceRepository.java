@@ -9,6 +9,5 @@ import java.util.Optional;
 
 public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     List<Invoice> findByStatus(InvoiceStatus status);
-    Optional<Invoice> findByInvoiceId(String invoiceId);
     boolean existsByInvoiceId(String invoiceId);
 }
