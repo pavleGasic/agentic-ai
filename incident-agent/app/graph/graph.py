@@ -3,6 +3,7 @@ from langgraph.graph import StateGraph, END
 from app.graph.state import IncidentState
 from app.tools.logs_tool import fetch_logs
 from app.agents.log_analysis_agent import LogAnalysisAgent
+from app.models.log_analysis_result import LogAnalysisResult
 
 log_agent = LogAnalysisAgent()
 
@@ -15,8 +16,17 @@ def fetch_logs_node(state: IncidentState):
     return {"logs": logs}
 
 def log_analysis_node(state: IncidentState):
-    return log_agent.analyze_logs(state["logs"])
-    
+    result: LogAnalysisResult = log_agent.analyze_logs(state["logs"])
+    return {
+        "log_errors": result.log_errors,
+        "affected_invoice_ids": result.affected_invoice_ids,
+        "log_summary": result.log_summary,
+        "incident_type": result.incident_type,
+        "resolution_type": result.resolution_type,
+        "confidence": result.confidence,
+        "suggested_user_action": result.suggested_user_actions
+    }
+
 def route_node(state: IncidentState):
     if state["resolution_type"].upper() == "USER":
         return "USER"
@@ -25,7 +35,7 @@ def route_node(state: IncidentState):
     
 def user_resolution_node(state: IncidentState):
     return {
-        "final_report": f"User resolution recommended with confidence {state['confidence']:.2f}. Suggested action: {state.get('suggested_user_action', 'N/A')}"
+        "final_report": f"User resolution recommended.\n Suggested action:\n{state.get('suggested_user_action', 'N/A')}"
     }
     
 def developer_node(state: IncidentState):

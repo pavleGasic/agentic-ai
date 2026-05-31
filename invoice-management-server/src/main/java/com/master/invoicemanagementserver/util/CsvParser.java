@@ -106,7 +106,9 @@ public class CsvParser {
                 }
 
                 if (!rowErrors.isEmpty()) {
-                    errors.add("Row " + rowNum + " [" + invoiceId + "]: " + String.join("; ", rowErrors));
+                    var errorMessage = "Row " + rowNum + " [" + invoiceId + "]: " + String.join("; ", rowErrors);
+                    persistLog(invoiceId, batchUpload.getId().toString(), errorMessage, "");
+                    errors.add(errorMessage);
                 } else {
                     validRows.add(new InvoiceRowDTO(invoiceId, customerName, amount, currency, issueDate, vendorCode));
                 }

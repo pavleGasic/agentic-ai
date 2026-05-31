@@ -16,7 +16,7 @@ def fetch_logs(invoice_id: str = None, batch_upload_id: str = None) -> list[dict
             logs.extend(response.json())
             
     if invoice_id:
-        url = f"{INVOICE_API_URL}/logs/invoice/{invoice_id}"
+        url = f"{INVOICE_API_URL}/logs/{invoice_id}"
         response = requests.get(url, timeout=10)
         if response.ok:
             logs.extend(response.json())
