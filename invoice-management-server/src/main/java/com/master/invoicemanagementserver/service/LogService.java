@@ -20,4 +20,9 @@ public class LogService {
         return logRepository.findByInvoiceIdOrderByTimestampAsc(invoiceId)
                 .stream().map(ProcessingLogDTO::from).collect(Collectors.toList());
     }
+
+    public List<ProcessingLogDTO> getLogsForBatch(String batchUploadId) {
+        return logRepository.findByBatchUploadIdOrderByTimestampAsc(batchUploadId)
+                .stream().map(ProcessingLogDTO::from).collect(Collectors.toList());
+    }
 }

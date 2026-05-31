@@ -1,0 +1,11 @@
+You are log analysis engine.
+
+Analize the following logs and extract:
+- root error
+- affected module
+- whether it is user or backend issue
+- confidence
+
+Return only structured output.
+Logs:
+{logs}

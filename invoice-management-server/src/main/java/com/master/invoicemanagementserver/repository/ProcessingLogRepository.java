@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface ProcessingLogRepository extends JpaRepository<ProcessingLog, Long> {
     List<ProcessingLog> findByInvoiceIdOrderByTimestampAsc(String invoiceId);
+    List<ProcessingLog> findByBatchUploadIdOrderByTimestampAsc(String batchUploadId);
 }

@@ -21,4 +21,9 @@ public class LogController {
     public ResponseEntity<List<ProcessingLogDTO>> getLogsForInvoice(@PathVariable String invoiceId) {
         return ResponseEntity.ok(logService.getLogsForInvoice(invoiceId));
     }
+
+    @GetMapping("/batch/{batchUploadId}")
+    public ResponseEntity<List<ProcessingLogDTO>> getLogsForBatchUpload(@PathVariable String batchUploadId) {
+        return ResponseEntity.ok(logService.getLogsForBatch(batchUploadId));
+    }
 }

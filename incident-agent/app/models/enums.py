@@ -1,10 +1,10 @@
 from enum import Enum
 
 class IncidentType(str, Enum):
-    USER_ERROR = "user_error"
-    BACKEND_ERROR = "backend_error"
-    UNKNOWN_ERROR = "unknown_error"
+    USER_ERROR = "USER_ERROR"
+    BACKEND_ERROR = "BACKEND_ERROR"
+    UNKNOWN_ERROR = "UNKNOWN_ERROR"
     
 class ResolutionType(str, Enum):
-    USER = "user"
-    DEVELOPER = "developer"
+    USER = "USER"
+    DEVELOPER = "DEVELOPER"
