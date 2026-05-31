@@ -45,6 +45,9 @@ public class Invoice {
     @Column(nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    @Column
+    private String batchUploadId;
+
     private LocalDateTime processedAt;
 
     @ManyToOne(fetch = FetchType.LAZY)

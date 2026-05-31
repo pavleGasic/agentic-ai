@@ -1,6 +1,7 @@
 package com.master.invoicemanagementserver.service;
 
 import com.master.invoicemanagementserver.dto.InvoiceDTO;
+import com.master.invoicemanagementserver.dto.BatchUploadDTO;
 import com.master.invoicemanagementserver.dto.InvoiceRowDTO;
 import com.master.invoicemanagementserver.dto.UploadResponseDTO;
 import com.master.invoicemanagementserver.entity.BatchUpload;
@@ -82,6 +83,7 @@ public class InvoiceService {
                 }
 
                 var invoice = toEntity(row);
+                invoice.setBatchUploadId(uploadId.toString());
 
                 var vendor = vendorRepository.findByVendorCode(row.getVendorCode()).orElse(null);
                 if (vendor == null) {
@@ -112,7 +114,7 @@ public class InvoiceService {
         batchUpload.setEndTime(LocalDateTime.now());
         batchUploadRepository.save(batchUpload);
         log.info("Upload complete: total={}, accepted={}, errors={}", total, successCount, errors.size());
-        return new UploadResponseDTO(total, successCount, errors.size(), errors);
+        return new UploadResponseDTO(uploadId, total, successCount, errors.size(), errors);
     }
 
     public List<InvoiceDTO> getAllInvoices(String statusFilter) {
@@ -150,5 +152,16 @@ public class InvoiceService {
         invoice.setIssueDate(LocalDate.parse(row.getIssueDate()));
         invoice.setStatus(InvoiceStatus.PENDING);
         return invoice;
+    }
+
+    public List<BatchUploadDTO> getAllBatches() {
+        return batchUploadRepository.findAll().stream()
+                .map(BatchUploadDTO::from)
+                .collect(Collectors.toList());
+    }
+
+    public List<InvoiceDTO> getInvoicesByBatch(UUID batchId) {
+        return invoiceRepository.findByBatchUploadId(batchId.toString())
+                .stream().map(InvoiceDTO::from).collect(Collectors.toList());
     }
 }

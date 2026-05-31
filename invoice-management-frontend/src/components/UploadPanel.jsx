@@ -107,6 +107,11 @@ function UploadResult({ result }) {
           ))}
         </div>
       )}
+      {result.batchId && (
+        <div className="batch-id-row">
+          Batch ID: <span className="batch-id-value">{result.batchId}</span>
+        </div>
+      )}
     </div>
   )
 }

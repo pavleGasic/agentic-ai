@@ -7,7 +7,9 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/invoices': 'http://localhost:8080',
-      '/logs': 'http://localhost:8080',
+      '/batches':  'http://localhost:8080',
+      '/vendors':  'http://localhost:8080',
+      '/logs':     'http://localhost:8080',
     },
   },
 })

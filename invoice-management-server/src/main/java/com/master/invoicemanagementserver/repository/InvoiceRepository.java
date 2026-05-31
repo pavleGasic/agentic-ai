@@ -10,4 +10,5 @@ import java.util.Optional;
 public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     List<Invoice> findByStatus(InvoiceStatus status);
     boolean existsByInvoiceId(String invoiceId);
+    List<Invoice> findByBatchUploadId(String batchUploadId);
 }

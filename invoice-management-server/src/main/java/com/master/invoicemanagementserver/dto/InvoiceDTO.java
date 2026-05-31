@@ -24,6 +24,7 @@ public class InvoiceDTO {
     private VendorDTO vendor;
     private LocalDateTime createdAt;
     private LocalDateTime processedAt;
+    private String batchUploadId;
 
     public static InvoiceDTO from(Invoice invoice) {
         InvoiceDTO dto = new InvoiceDTO();
@@ -38,6 +39,7 @@ public class InvoiceDTO {
         dto.vendor = invoice.getVendor() != null ? VendorDTO.from(invoice.getVendor()) : null;
         dto.createdAt = invoice.getCreatedAt();
         dto.processedAt = invoice.getProcessedAt();
+        dto.batchUploadId = invoice.getBatchUploadId();
         return dto;
     }
 }

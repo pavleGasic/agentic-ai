@@ -1,20 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import UploadPanel from './components/UploadPanel'
 import InvoiceTable from './components/InvoiceTable'
-import LogPanel from './components/LogPanel'
 import VendorPanel from './components/VendorPanel'
+import BatchUploadsPanel from './components/BatchUploadsPanel'
+import BatchInvoicesPanel from './components/BatchInvoicesPanel'
 
 export default function App() {
   const [invoices, setInvoices] = useState([])
   const [invoicesLoading, setInvoicesLoading] = useState(false)
   const [statusFilter, setStatusFilter] = useState('')
-
   const [selectedInvoice, setSelectedInvoice] = useState(null)
-  const [logs, setLogs] = useState([])
-  const [logsLoading, setLogsLoading] = useState(false)
 
   const [vendors, setVendors] = useState([])
   const [vendorsLoading, setVendorsLoading] = useState(false)
+
+  const [batches, setBatches] = useState([])
+  const [batchesLoading, setBatchesLoading] = useState(false)
+  const [selectedBatch, setSelectedBatch] = useState(null)
+  const [batchInvoices, setBatchInvoices] = useState([])
+  const [batchInvoicesLoading, setBatchInvoicesLoading] = useState(false)
 
   const autoRefreshRef = useRef(false)
   const intervalRef = useRef(null)
@@ -46,62 +50,74 @@ export default function App() {
     }
   }, [])
 
-  const fetchLogs = useCallback(async (invoiceId) => {
-    setLogsLoading(true)
+  const fetchBatches = useCallback(async () => {
+    setBatchesLoading(true)
     try {
-      const res = await fetch(`/logs/${invoiceId}`)
+      const res = await fetch('/batches')
       const data = await res.json()
-      setLogs(Array.isArray(data) ? data : [])
+      setBatches(Array.isArray(data) ? data : [])
     } catch {
-      setLogs([])
+      setBatches([])
     } finally {
-      setLogsLoading(false)
+      setBatchesLoading(false)
+    }
+  }, [])
+
+  const fetchBatchInvoices = useCallback(async (batchId) => {
+    setBatchInvoicesLoading(true)
+    try {
+      const res = await fetch(`/batches/${batchId}/invoices`)
+      const data = await res.json()
+      setBatchInvoices(Array.isArray(data) ? data : [])
+    } catch {
+      setBatchInvoices([])
+    } finally {
+      setBatchInvoicesLoading(false)
     }
   }, [])
 
   useEffect(() => {
     fetchVendors()
     fetchInvoices(statusFilter)
-  }, [fetchVendors, fetchInvoices])
+    fetchBatches()
+  }, [fetchVendors, fetchInvoices, fetchBatches])
 
   useEffect(() => {
     fetchInvoices(statusFilter)
   }, [statusFilter, fetchInvoices])
 
-  // Re-fetch logs when invoices update and one is selected
-  useEffect(() => {
-    if (selectedInvoice) fetchLogs(selectedInvoice.invoiceId)
-  }, [invoices, selectedInvoice, fetchLogs])
-
   function handleSelect(inv) {
     setSelectedInvoice(inv)
-    fetchLogs(inv.invoiceId)
   }
 
   function handleFilterChange(f) {
     setStatusFilter(f)
     setSelectedInvoice(null)
-    setLogs([])
+  }
+
+  function handleBatchSelect(batch) {
+    setSelectedBatch(batch)
+    fetchBatchInvoices(batch.id)
   }
 
   function handleRefresh(enableAuto) {
     fetchInvoices(statusFilter)
-    if (selectedInvoice) fetchLogs(selectedInvoice.invoiceId)
+    fetchBatches()
+    if (selectedBatch) fetchBatchInvoices(selectedBatch.id)
 
-    // toggle auto-refresh
     if (enableAuto !== undefined) {
       autoRefreshRef.current = enableAuto
       clearInterval(intervalRef.current)
       if (enableAuto) {
         intervalRef.current = setInterval(() => {
           fetchInvoices(statusFilter)
-          if (selectedInvoice) fetchLogs(selectedInvoice.invoiceId)
+          fetchBatches()
+          if (selectedBatch) fetchBatchInvoices(selectedBatch.id)
         }, 3000)
       }
     }
   }
 
-  // Cleanup on unmount
   useEffect(() => () => clearInterval(intervalRef.current), [])
 
   return (
@@ -113,7 +129,14 @@ export default function App() {
       </header>
 
       <div className="app-body">
-        <UploadPanel onUploaded={() => fetchInvoices(statusFilter)} />
+        <div className="col-left">
+          <UploadPanel onUploaded={() => { fetchInvoices(statusFilter); fetchBatches() }} />
+          <VendorPanel
+            vendors={vendors}
+            loading={vendorsLoading}
+            onCreated={fetchVendors}
+          />
+        </div>
 
         <InvoiceTable
           invoices={invoices}
@@ -124,17 +147,19 @@ export default function App() {
           onRefresh={handleRefresh}
         />
 
-        <LogPanel
-          invoiceId={selectedInvoice?.invoiceId}
-          logs={logs}
-          loading={logsLoading}
-        />
-
-        <VendorPanel
-          vendors={vendors}
-          loading={vendorsLoading}
-          onCreated={fetchVendors}
-        />
+        <div className="col-right">
+          <BatchUploadsPanel
+            batches={batches}
+            loading={batchesLoading}
+            selectedBatchId={selectedBatch?.id}
+            onSelect={handleBatchSelect}
+          />
+          <BatchInvoicesPanel
+            batch={selectedBatch}
+            invoices={batchInvoices}
+            loading={batchInvoicesLoading}
+          />
+        </div>
       </div>
     </>
   )

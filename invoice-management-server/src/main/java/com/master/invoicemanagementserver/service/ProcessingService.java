@@ -73,7 +73,7 @@ public class ProcessingService {
             invoice.setProcessedAt(LocalDateTime.now());
             invoiceRepository.save(invoice);
             persistLog(invoice.getInvoiceId(), batchUpload.getId().toString(), "INFO", "Processing completed successfully", null);
-            log.info("Invoice {} status updated to FAILED", invoice.getInvoiceId());
+            log.info("Invoice {} status updated to PROCESSED", invoice.getInvoiceId());
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
