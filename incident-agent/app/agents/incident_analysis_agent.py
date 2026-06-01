@@ -1,54 +1,38 @@
 from pathlib import Path
+from datetime import datetime, timezone
 
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_groq import ChatGroq
-from langchain.agents import create_agent
 
 from app.config import GROQ_API_KEY, MODEL_NAME, TEMPERATURE
-from app.tools.datetime_tool import get_time_context
 from app.models.incident_analysis_result import IncidentAnalysisResult
+
 
 class IncidentAnalysisAgent:
 
     def __init__(self):
-
-        self.llm = ChatGroq(
-            api_key=GROQ_API_KEY,
-            model=MODEL_NAME,
-            temperature=TEMPERATURE
-        )
-
-        self.tools = [get_time_context]
+        llm = ChatGroq(api_key=GROQ_API_KEY, model=MODEL_NAME, temperature=TEMPERATURE)
+        self.structured_llm = llm.with_structured_output(IncidentAnalysisResult)
 
         prompt_path = (
             Path(__file__).parent.parent
             / "prompts"
             / "incident_analysis_prompt.txt"
         )
-
         self.system_prompt = prompt_path.read_text()
 
-        self.agent = create_agent(
-            model=self.llm,
-            tools=self.tools,
-            system_prompt=self.system_prompt,
-            response_format=IncidentAnalysisResult
+    def analyze_incident(self, state) -> IncidentAnalysisResult:
+        now = datetime.now(timezone.utc)
+        time_context = (
+            f"Current time (UTC): {now.isoformat()}, "
+            f"date: {now.date().isoformat()}, "
+            f"weekday: {now.weekday()}"
         )
 
-    def analyze_incident(self, state) -> IncidentAnalysisResult:
+        system_message = SystemMessage(content=f"{self.system_prompt}\n\n{time_context}")
+        user_message = HumanMessage(content=(
+            f"Incident title:\n{state.get('incident_title', '')}\n\n"
+            f"Incident description:\n{state.get('incident_description', '')}"
+        ))
 
-        result = self.agent.invoke({
-            "messages": [
-                (
-                    "user",
-                    f"""
-                    Incident title:
-                    {state.get("incident_title","")}
-
-                    Incident description:
-                    {state.get("incident_description","")}
-                    """
-                )
-            ]
-        })
-
-        return result
+        return self.structured_llm.invoke([system_message, user_message])
