@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 import asyncio
+import app.config  # ensures LangSmith env vars are set before graph runs
 from app.network.incident_client import post_comment
 from app.graph.state import IncidentState
 from app.graph.graph import build_graph
