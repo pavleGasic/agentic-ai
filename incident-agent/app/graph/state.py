@@ -1,10 +1,13 @@
-from typing import TypedDict
-from typing import List, Optional
+from typing import TypedDict, List, Optional
+from datetime import datetime 
 
 class IncidentState(TypedDict):
     incident_title: str
     incident_description: str
-    batch_id: str | None
+    
+    business_context: Optional[str]
+    start_time: Optional[datetime]
+    end_time: Optional[datetime]
     
     logs: Optional[List[dict]]
     log_errors: Optional[List[str]]

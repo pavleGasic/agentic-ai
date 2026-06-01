@@ -88,9 +88,9 @@ services:
       INCIDENT_API_URL: "http://incident-app:8081"
       INCIDENT_API_USER: "system"
       INCIDENT_API_PASSWORD: ${INCIDENT_SYSTEM_PASSWORD}
-      LANGCHAIN_TRACING_V2: "true"
-      LANGCHAIN_API_KEY: ${LANGCHAIN_API_KEY}
-      LANGCHAIN_PROJECT: "incident-agent"
+      LANGSMITH_TRACING: "true"
+      LANGSMITH_API_KEY: ${LANGSMITH_API_KEY}
+      LANGSMITH_PROJECT: "incident-agent"
     ports:
       - "8000:8000"
 

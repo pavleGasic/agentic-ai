@@ -19,7 +19,7 @@ class CodeAgent:
         self.prompt = prompt_path.read_text()
         
     def analyze_code(self, state: IncidentState) -> CodeAnalysisResult:
-        query = f"{state.get("responsible_component", "")} {state.get("responsible_method", "")} {' '.join(state.get("log_errors", []))}"
+        query = ""
         code_chunks = get_relevant_code(query)
         code_context = "\n\n".join(code_chunks)
         

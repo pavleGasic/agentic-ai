@@ -1,0 +1,4 @@
+invoice_id,customer_name,amount,currency,issue_date,vendor_code
+INV-S2-001,Acme Corporation,380.00,EUR,2025-02-01,VEND-001
+INV-S2-002,Beta Trading,920.00,USD,2025-02-03,VEND-002
+INV-S2-003,Gamma Solutions,475.00,EUR,2025-02-04,,VEND-003

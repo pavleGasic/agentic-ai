@@ -1,21 +1,16 @@
 from langgraph.graph import StateGraph, END
 
-from app.graph.state import IncidentState
-from app.models.code_analysis_result import CodeAnalysisResult
-from app.tools.logs_tool import fetch_logs
-from app.agents.log_analysis_agent import LogAnalysisAgent
 import logging
-from langgraph.graph import StateGraph, END
-
 from app.graph.state import IncidentState
-from app.models.code_analysis_result import CodeAnalysisResult
-from app.tools.logs_tool import fetch_logs
+from app.agents.incident_analysis_agent import IncidentAnalysisAgent
+from app.models.incident_analysis_result import IncidentAnalysisResult
 from app.agents.log_analysis_agent import LogAnalysisAgent
-from app.agents.code_agent import CodeAgent
 from app.models.log_analysis_result import LogAnalysisResult
+from app.tools.logs_tool import fetch_logs
+from app.agents.code_agent import CodeAgent
+from app.models.code_analysis_result import CodeAnalysisResult
 
 
-# Logger setup: only configure basic logging if no handlers are present
 logger = logging.getLogger(__name__)
 if not logging.getLogger().handlers:
     logging.basicConfig(
@@ -23,9 +18,28 @@ if not logging.getLogger().handlers:
         format="%(asctime)s %(levelname)s [%(name)s] %(message)s"
     )
 
+incident_agent = IncidentAnalysisAgent()
 log_agent = LogAnalysisAgent()
 code_agent = CodeAgent()
 
+def incident_analysis_node(state: IncidentState):
+    logger.info("incident_analysis_node start: incident_title=%s", state.get("incident_title"))
+    result: IncidentAnalysisResult = incident_agent.analyze_incident(state)
+    
+    out = {
+        "business_context": result.business_context,
+        "start_time": result.start_time,
+        "end_time": result.end_time
+    }
+    
+    logger.info(
+        "incident_analysis_node result: business_context=%s start_time=%s end_time=%s",
+        out["business_context"],
+        out["start_time"],
+        out["end_time"]
+    )
+    
+    return out
 
 def fetch_logs_node(state: IncidentState):
     invoice_id = state.get("invoice_id", "")
@@ -151,29 +165,36 @@ def developer_node(state: IncidentState):
 def build_graph():
     logger.info("build_graph: constructing StateGraph")
     graph = StateGraph(IncidentState)
+    
+    graph.add_node("incident_analysis", incident_analysis_node)
+    
+    graph.set_entry_point("incident_analysis")
+    
+    graph.add_edge("incident_analysis", END)
 
-    graph.add_node("fetch_logs", fetch_logs_node)
-    graph.add_node("log_analysis", log_analysis_node)
-    graph.add_node("analyze_code", analyze_code_node)
-    graph.add_node("user_resolution", user_resolution_node)
-    graph.add_node("developer_investigation", developer_node)
 
-    graph.set_entry_point("fetch_logs")
+    # graph.add_node("fetch_logs", fetch_logs_node)
+    # graph.add_node("log_analysis", log_analysis_node)
+    # graph.add_node("analyze_code", analyze_code_node)
+    # graph.add_node("user_resolution", user_resolution_node)
+    # graph.add_node("developer_investigation", developer_node)
 
-    graph.add_edge("fetch_logs", "log_analysis")
+    # graph.set_entry_point("fetch_logs")
 
-    graph.add_conditional_edges(
-        "log_analysis",
-        route_node,
-        {
-            "USER": "user_resolution",
-            "DEVELOPER": "analyze_code"
-        }
-    )
+    # graph.add_edge("fetch_logs", "log_analysis")
 
-    graph.add_edge("user_resolution", END)
-    graph.add_edge("analyze_code", "developer_investigation")
-    graph.add_edge("developer_investigation", END)
+    # graph.add_conditional_edges(
+    #     "log_analysis",
+    #     route_node,
+    #     {
+    #         "USER": "user_resolution",
+    #         "DEVELOPER": "analyze_code"
+    #     }
+    # )
+
+    # graph.add_edge("user_resolution", END)
+    # graph.add_edge("analyze_code", "developer_investigation")
+    # graph.add_edge("developer_investigation", END)
 
     logger.info("build_graph: compiling graph")
     compiled = graph.compile()

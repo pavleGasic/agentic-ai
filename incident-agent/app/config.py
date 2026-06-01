@@ -11,8 +11,7 @@ INCIDENT_API_URL = os.getenv("INCIDENT_API_URL", "http://localhost:8081")
 INCIDENT_API_USER = os.getenv("INCIDENT_API_USER", "admin")
 INCIDENT_API_PASSWORD = os.getenv("INCIDENT_API_PASSWORD")
 
-# LangSmith tracing
-os.environ.setdefault("LANGCHAIN_TRACING_V2", os.getenv("LANGCHAIN_TRACING_V2", "false"))
-os.environ.setdefault("LANGCHAIN_ENDPOINT", os.getenv("LANGCHAIN_ENDPOINT", "https://api.smith.langchain.com"))
-os.environ.setdefault("LANGCHAIN_API_KEY", os.getenv("LANGCHAIN_API_KEY", ""))
-os.environ.setdefault("LANGCHAIN_PROJECT", os.getenv("LANGCHAIN_PROJECT", "incident-agent"))
+os.environ.setdefault("LANGSMITH_TRACING", os.getenv("LANGCHAIN_TRACING_V2", "false"))
+os.environ.setdefault("LANGSMITH_ENDPOINT", os.getenv("LANGCHAIN_ENDPOINT", "https://api.smith.langchain.com"))
+os.environ.setdefault("LANGSMITH_API_KEY", os.getenv("LANGCHAIN_API_KEY", ""))
+os.environ.setdefault("LANGSMITH_PROJECT", os.getenv("LANGCHAIN_PROJECT", "incident-agent"))
