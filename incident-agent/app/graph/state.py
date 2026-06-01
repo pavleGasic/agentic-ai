@@ -11,13 +11,16 @@ class IncidentState(TypedDict):
     affected_invoice_ids: Optional[List[str]]
     logs_summary: Optional[str]
     incident_type: Optional[str]
-    resolution_type: str
-    confidence: float
+    resolution_type: Optional[str]
+    confidence: Optional[float]
     classification_reasoning: Optional[str]
-    suggested_user_action: Optional[str]
-    
     responsible_component: Optional[str]
+    responsible_method: Optional[str]
+    suggested_user_actions: Optional[str] = None
+
+    
     error_type: Optional[str]
+    fix_suggestion: Optional[str]
     code_analysis_reasoning: Optional[str]
     
     similar_incidents: Optional[list[dict]]

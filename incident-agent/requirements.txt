@@ -1,9 +1,13 @@
+chromadb
 fastapi
 langchain
+langchain_community
+langchain-text-splitters
 langgraph
 langchain-groq
 pytest
 python-dotenv
 pydantic
 requests
+sentence-transformers
 uvicorn

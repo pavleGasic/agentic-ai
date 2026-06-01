@@ -36,8 +36,8 @@ UNKNOWN_ERROR + DEVELOPER:
 IMPORTANT OUTPUT RULES:
 - resolution_type MUST be either "USER" or "DEVELOPER"
 - incident_type MUST be "USER_ERROR", "BACKEND_ERROR", or "UNKNOWN_ERROR"
-- suggested_user_action:
+- suggested_user_actions:
   - MUST be a STRING when incident_type = user_error
   - MUST be empty string "" when BACKEND_ERROR or UNKNOWN_ERROR
-- if suggested_user_action is provided, include detailed steps for fixing problem in list format, include all relevant details for solving user problem
+- if suggested_user_actions is provided, include detailed steps for fixing problem in list format, include all relevant details for solving user problem
 - if user issue is with file format, MUST include exact line/s of error/s and proposed solution
