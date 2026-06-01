@@ -10,11 +10,9 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class ProcessingLogDTO {
     private Long id;
-    private String invoiceId;
+    private String businessContext;
     private String level;
     private String module;
-    private String endpoint;
-    private String batchUploadId;
     private String message;
     private String stackTrace;
     private LocalDateTime timestamp;
@@ -22,14 +20,12 @@ public class ProcessingLogDTO {
     public static ProcessingLogDTO from(ProcessingLog log) {
         ProcessingLogDTO dto = new ProcessingLogDTO();
         dto.id = log.getId();
-        dto.invoiceId = log.getInvoiceId();
         dto.level = log.getLevel();
         dto.module = log.getModule();
-        dto.endpoint = log.getEndpoint();
-        dto.batchUploadId = log.getBatchUploadId();
         dto.message = log.getMessage();
         dto.stackTrace = log.getStackTrace();
         dto.timestamp = log.getTimestamp();
+        dto.businessContext = log.getBusinessContext();
         return dto;
     }
 }

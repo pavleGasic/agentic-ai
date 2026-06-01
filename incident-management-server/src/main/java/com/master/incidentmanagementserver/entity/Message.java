@@ -29,6 +29,10 @@ public class Message {
     @JoinColumn(name = "author_id", nullable = false)
     private User author;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Visibility visibility = Visibility.PUBLIC;
+
     @Column(nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 }

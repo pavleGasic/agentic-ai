@@ -21,10 +21,6 @@ public class BatchUpload {
     @Column(nullable = false)
     private String importFileName;
 
-    private Integer importedInvoices;
-
-    private Integer errorInvoices;
-
     @Column(nullable = false)
     private LocalDateTime startDate;
 

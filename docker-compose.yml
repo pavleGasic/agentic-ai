@@ -65,6 +65,8 @@ services:
     depends_on:
       incident-db:
         condition: service_healthy
+      incident-agent:
+        condition: service_started
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://incident-db:5432/incidentdb
       SPRING_DATASOURCE_USERNAME: postgres
@@ -72,8 +74,22 @@ services:
       SERVER_PORT: "8081"
       JWT_SECRET: "skXk7VOMWvDXN20KVJSxOVBTmKRkGtjixw5XxSLFjca"
       JWT_EXPIRATION_MS: "86400000"
+      AGENT_URL: "http://incident-agent:8000"
+      INCIDENT_SYSTEM_PASSWORD: ${INCIDENT_SYSTEM_PASSWORD}
     ports:
       - "8081:8081"
+
+  incident-agent:
+    build: ./incident-agent
+    container_name: incident-agent
+    environment:
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      INVOICE_API_URL: "http://app:8080"
+      INCIDENT_API_URL: "http://incident-app:8081"
+      INCIDENT_API_USER: "system"
+      INCIDENT_API_PASSWORD: ${INCIDENT_SYSTEM_PASSWORD}
+    ports:
+      - "8000:8000"
 
   incident-frontend:
     build: ./incident-management-frontend

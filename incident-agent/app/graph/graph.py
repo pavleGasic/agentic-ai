@@ -106,7 +106,8 @@ def user_resolution_node(state: IncidentState):
     suggested = state.get('suggested_user_actions', 'N/A')
     logger.info("user_resolution_node: suggested_actions=%s", suggested)
     return {
-        "final_report": f"User resolution recommended.\nSuggested action:\n{suggested}"
+        "final_report": f"User resolution recommended.\nSuggested action:\n{suggested}",
+        "final_report_visibility": "PUBLIC"
     }
 
 
@@ -142,7 +143,8 @@ def analyze_code_node(state: IncidentState):
 def developer_node(state: IncidentState):
     logger.info("developer_node: confidence=%s component=%s error_type=%s", state.get('confidence'), state.get('responsible_component'), state.get('error_type'))
     return {
-        "final_report": f"Developer investigation recommended with confidence {state.get('confidence', 0.0):.2f}. Responsible component: {state.get('responsible_component', 'N/A')}, Error type: {state.get('error_type', 'N/A')}"
+        "final_report": f"Developer investigation recommended with confidence {state.get('confidence', 0.0):.2f}. Responsible component: {state.get('responsible_component', 'N/A')}, Error type: {state.get('error_type', 'N/A')}",
+        "final_report_visibility": "DEVELOPER_ONLY"
     }
 
 

@@ -1,7 +1,7 @@
 package com.master.invoicemanagementserver.service;
 
-import com.master.invoicemanagementserver.dto.InvoiceDTO;
 import com.master.invoicemanagementserver.dto.BatchUploadDTO;
+import com.master.invoicemanagementserver.dto.InvoiceDTO;
 import com.master.invoicemanagementserver.dto.InvoiceRowDTO;
 import com.master.invoicemanagementserver.dto.UploadResponseDTO;
 import com.master.invoicemanagementserver.entity.*;
@@ -9,12 +9,8 @@ import com.master.invoicemanagementserver.exception.InvoiceNotFoundException;
 import com.master.invoicemanagementserver.exception.InvoiceValidationException;
 import com.master.invoicemanagementserver.repository.BatchUploadRepository;
 import com.master.invoicemanagementserver.repository.InvoiceRepository;
-import com.master.invoicemanagementserver.repository.ProcessingLogRepository;
 import com.master.invoicemanagementserver.repository.VendorRepository;
 import com.master.invoicemanagementserver.util.CsvParser;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -29,28 +25,25 @@ import java.util.stream.Collectors;
 @Service
 public class InvoiceService {
 
-    private static final Logger log = LoggerFactory.getLogger(InvoiceService.class);
-
     private final InvoiceRepository invoiceRepository;
     private final VendorRepository vendorRepository;
     private final ProcessingService processingService;
     private final BatchUploadRepository batchUploadRepository;
     private final CsvParser csvParser;
-    private final ProcessingLogRepository logRepository;
-
+    private final LoggingService loggingService;
 
     public InvoiceService(InvoiceRepository invoiceRepository,
                           VendorRepository vendorRepository,
                           ProcessingService processingService,
                           BatchUploadRepository batchUploadRepository,
                           CsvParser csvParser,
-                          ProcessingLogRepository logRepository) {
+                          LoggingService loggingService) {
         this.invoiceRepository = invoiceRepository;
         this.vendorRepository = vendorRepository;
         this.processingService = processingService;
         this.batchUploadRepository = batchUploadRepository;
         this.csvParser = csvParser;
-        this.logRepository = logRepository;
+        this.loggingService = loggingService;
     }
 
     public UploadResponseDTO uploadInvoices(MultipartFile file) {
@@ -58,31 +51,53 @@ public class InvoiceService {
             throw new InvoiceValidationException("Uploaded file is empty");
         }
 
-        var batchUpload = new BatchUpload();
         var uploadId = UUID.randomUUID();
         var fileName = file.getOriginalFilename();
+
+        var batchUpload = new BatchUpload();
         batchUpload.setId(uploadId);
         batchUpload.setStartDate(LocalDateTime.now());
         batchUpload.setImportFileName(fileName);
-        MDC.put("fileName", fileName);
-        log.info("Starting CSV upload: filename={}, size={}", fileName, file.getSize());
 
-        var parseResult = csvParser.parse(file, batchUpload);
-        List<String> errors = new ArrayList<>();
-        for (String parseError : parseResult.errors()) {
-            log.warn("CSV parse error: {}", parseError);
-            errors.add("One or more invoices could not be processed. Please contact support.");
+        var parseResult = new CsvParser.ParseResult(List.of(), List.of());
+        try {
+          parseResult = csvParser.parse(file);
+        } catch (Exception e){
+            loggingService.error(
+                "InvoiceService",
+                "file:" + fileName,
+                "Failed to parse CSV file: " + e.getMessage(),
+                e
+            );
+            throw e;
         }
-        int successCount = 0;
+        String errorMessage = null;
 
-        for (InvoiceRowDTO row : parseResult.validRows()) {
-            MDC.put("invoiceId", row.getInvoiceId());
+        if (!parseResult.errors().isEmpty()) {
+          for (var parseError : parseResult.errors()) {
+            loggingService.error(
+                    "CsvParser",
+                    "file:" + fileName,
+                    parseError.message()
+            );
+          }
+          throw new InvoiceValidationException("One or more rows in the CSV file are invalid. Please correct the errors and try again.");
+        }
+
+        int successCount = 0;
+        int failedCount = 0;
+
+        for (var row : parseResult.validRows()) {
+            var businessContext = "file:" + fileName + ", invoice:" + row.getInvoiceId() + ", vendor:" + row.getVendorCode();
             try {
                 if (invoiceRepository.existsByInvoiceId(row.getInvoiceId())) {
-                    var errorMessage = "Duplicate invoiceId rejected: " + row.getInvoiceId();
-                    errors.add("One or more invoices could not be processed. Please contact support.");
-                    log.error(errorMessage);
-                    persistLog(row.getInvoiceId(), batchUpload.getId().toString(), errorMessage, null);
+                    loggingService.error(
+                        "InvoiceService",
+                        businessContext,
+                        "Duplicate invoiceId rejected: " + row.getInvoiceId()
+                    );
+                    failedCount++;
+                    errorMessage = "One or more invoices could not be processed. Please contact support.";
                     continue;
                 }
 
@@ -91,36 +106,40 @@ public class InvoiceService {
 
                 var vendor = vendorRepository.findByVendorCode(row.getVendorCode()).orElse(null);
                 if (vendor == null) {
-                    var errorMessage = String.format("Invoice %s rejected — vendor not found: %s", row.getInvoiceId(), row.getVendorCode());
-                    errors.add("One or more invoices could not be processed. Please contact support.");
-                    log.error("Invoice {} rejected — vendor not found: {}", row.getInvoiceId(), row.getVendorCode());
+                    loggingService.error(
+                        "InvoiceService",
+                        businessContext,
+                        "Invoice rejected — vendor not found: " + row.getVendorCode()
+                    );
+                    failedCount++;
                     invoice.setStatus(InvoiceStatus.FAILED);
-                    persistLog(row.getInvoiceId(), batchUpload.getId().toString(), errorMessage, null);
                     invoiceRepository.save(invoice);
+                    errorMessage = "One or more invoices could not be processed. Please contact support.";
                     continue;
                 }
 
                 invoice.setVendor(vendor);
                 invoiceRepository.save(invoice);
-                log.info("Invoice saved as PENDING: {}", invoice.getInvoiceId());
 
                 processingService.processInvoiceAsync(batchUpload, invoice);
                 successCount++;
             } catch (Exception e) {
-                errors.add("One or more invoices could not be processed. Please contact support.");
-                log.error("Failed to store invoice {}", row.getInvoiceId(), e);
-            } finally {
-                MDC.remove("invoiceId");
+                loggingService.error(
+                    "InvoiceService",
+                    businessContext,
+                    "Failed to store invoice: " + row.getInvoiceId(),
+                    e
+                );
+                failedCount++;
+                errorMessage = "One or more invoices could not be processed. Please contact support.";
             }
         }
 
         int total = parseResult.validRows().size() + parseResult.errors().size();
-        batchUpload.setImportedInvoices(total - errors.size());
-        batchUpload.setErrorInvoices(errors.size());
         batchUpload.setEndTime(LocalDateTime.now());
         batchUploadRepository.save(batchUpload);
-        log.info("Upload complete: total={}, accepted={}, errors={}", total, successCount, errors.size());
-        return new UploadResponseDTO(uploadId, total, successCount, errors.size(), errors);
+
+        return new UploadResponseDTO(uploadId, total, successCount, failedCount, errorMessage);
     }
 
     public List<InvoiceDTO> getAllInvoices(String statusFilter) {
@@ -149,17 +168,6 @@ public class InvoiceService {
                 .stream().map(InvoiceDTO::from).collect(Collectors.toList());
     }
 
-    private Invoice toEntity(InvoiceRowDTO row) {
-        var invoice = new Invoice();
-        invoice.setInvoiceId(row.getInvoiceId());
-        invoice.setCustomerName(row.getCustomerName());
-        invoice.setAmount(new BigDecimal(row.getAmount()));
-        invoice.setCurrency(row.getCurrency().toUpperCase());
-        invoice.setIssueDate(LocalDate.parse(row.getIssueDate()));
-        invoice.setStatus(InvoiceStatus.PENDING);
-        return invoice;
-    }
-
     public List<BatchUploadDTO> getAllBatches() {
         return batchUploadRepository.findAll().stream()
                 .map(BatchUploadDTO::from)
@@ -171,20 +179,14 @@ public class InvoiceService {
                 .stream().map(InvoiceDTO::from).collect(Collectors.toList());
     }
 
-    private void persistLog(String invoiceId, String batchUploadId, String message, String stackTrace) {
-        try {
-            var entry = new ProcessingLog();
-            entry.setInvoiceId(invoiceId);
-            entry.setLevel("ERROR");
-            entry.setModule("InvoiceService");
-            entry.setEndpoint(MDC.get("endpoint") != null ? MDC.get("endpoint") : "/invoices/upload");
-            entry.setBatchUploadId(batchUploadId);
-            entry.setMessage(message);
-            entry.setStackTrace(stackTrace);
-            entry.setTimestamp(LocalDateTime.now());
-            logRepository.save(entry);
-        } catch (Exception e) {
-            log.warn("Failed to persist processing log for {}: {}", invoiceId, e.getMessage());
-        }
+    private Invoice toEntity(InvoiceRowDTO row) {
+        var invoice = new Invoice();
+        invoice.setInvoiceId(row.getInvoiceId());
+        invoice.setCustomerName(row.getCustomerName());
+        invoice.setAmount(new BigDecimal(row.getAmount()));
+        invoice.setCurrency(row.getCurrency().toUpperCase());
+        invoice.setIssueDate(LocalDate.parse(row.getIssueDate()));
+        invoice.setStatus(InvoiceStatus.PENDING);
+        return invoice;
     }
 }

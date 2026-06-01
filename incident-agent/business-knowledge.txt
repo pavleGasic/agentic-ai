@@ -1,0 +1,74 @@
+INVOICE MANAGEMENT SYSTEM — BUSINESS OVERVIEW
+==============================================
+
+WHAT THE SYSTEM DOES
+--------------------
+The Invoice Management System allows businesses to submit vendor invoices in bulk
+by uploading a CSV file. The system validates each invoice, processes it, and tracks
+whether it was accepted or rejected. At the end of a batch, earnings can be calculated
+per vendor to determine their total payout including applicable bonuses.
+
+
+WHO USES IT
+-----------
+- Operations / Finance teams who upload invoice files on behalf of the business
+- Management who review batch results and vendor earnings
+- Support teams who investigate why certain invoices were rejected
+
+
+KEY CONCEPTS
+------------
+
+Vendor
+  A supplier or service provider registered in the system.
+  Every invoice must reference a known vendor. If the vendor does not exist,
+  the invoice is rejected. Vendors are identified by a short code (e.g. "ACME")
+  and a full name (e.g. "Acme Corp").
+
+Invoice
+  A single invoice submitted by a vendor. Each invoice has:
+  - A unique invoice ID (assigned by the submitter)
+  - A vendor it belongs to
+  - An amount and currency
+  - An issue date (the date the invoice was originally issued)
+  - A status: Pending, Processed, or Failed
+
+Batch Upload
+  When a CSV file is uploaded, all invoices in it form a batch.
+  Each batch gets a unique ID. The batch tracks how many invoices
+  were accepted and how many were rejected.
+
+Earnings Calculation
+  After a batch is processed, the finance team can calculate vendor earnings.
+  The system sums up all successfully processed invoice amounts per vendor
+  and applies a bonus based on the total:
+  - Below 2,000 → no bonus
+  - Between 2,000 and 4,000 → 10% bonus
+  - Above 4,000 → 20% bonus
+  The result is the final payout amount per vendor for that batch.
+
+
+TYPICAL WORKFLOW
+----------------
+1. Finance team prepares a CSV file with invoices from one or more vendors.
+2. The file is uploaded through the system.
+3. Each invoice is validated and processed. Some may fail due to data issues.
+4. The team reviews which invoices passed and which failed.
+5. Once processing is complete, earnings are calculated for the batch.
+6. The finance team uses the earnings report to determine vendor payouts.
+
+
+REASONS AN INVOICE CAN BE REJECTED
+------------------------------------
+- The vendor code in the file does not match any registered vendor
+- The invoice ID already exists in the system (duplicate submission)
+- The invoice issue date is more than 2 years old
+- The CSV file contains formatting errors (missing fields, invalid currency format, wrong date format)
+
+
+WHAT CUSTOMERS MIGHT REPORT AS PROBLEMS
+-----------------------------------------
+- "My invoice was not processed" → likely a vendor mismatch, duplicate ID, or date issue
+- "The whole upload failed" → likely a formatting problem in the CSV file
+- "The earnings are wrong or missing" → invoices may still be processing, or some failed
+- "A vendor is missing from the earnings report" → that vendor had no successfully processed invoices in the batch

@@ -10,11 +10,11 @@ def _get_token() -> str:
     response.raise_for_status()
     return response.json().get("token")
 
-def post_comment(incident_id: str, content: str) -> None:
+def post_comment(incident_id: str, content: str, visibility: str = "PUBLIC") -> None:
     token = _get_token()
     requests.post(
         f"{INCIDENT_API_URL}/api/incidents/{incident_id}/messages",
-        json={"content": content},
+        json={"content": content, "visibility": visibility},
         headers={"Authorization": f"Bearer {token}"},
         timeout=10
     )

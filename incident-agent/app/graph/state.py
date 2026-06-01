@@ -27,3 +27,4 @@ class IncidentState(TypedDict):
     history_search_reasoning: Optional[str]
     
     final_report: Optional[str]
+    final_report_visibility: Optional[str]

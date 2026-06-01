@@ -19,16 +19,11 @@ public class ProcessingLog {
     private Long id;
 
     @Column(nullable = false)
-    private String invoiceId;
-
-    @Column(nullable = false)
     private String level;
 
     private String module;
 
-    private String endpoint;
-
-    private String batchUploadId;
+    private String businessContext;
 
     @Column(columnDefinition = "TEXT", nullable = false)
     private String message;

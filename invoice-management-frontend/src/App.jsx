@@ -4,8 +4,11 @@ import InvoiceTable from './components/InvoiceTable'
 import VendorPanel from './components/VendorPanel'
 import BatchUploadsPanel from './components/BatchUploadsPanel'
 import BatchInvoicesPanel from './components/BatchInvoicesPanel'
+import EarningsPanel from './components/EarningsPanel'
 
 export default function App() {
+  const [activeTab, setActiveTab] = useState('invoices')
+
   const [invoices, setInvoices] = useState([])
   const [invoicesLoading, setInvoicesLoading] = useState(false)
   const [statusFilter, setStatusFilter] = useState('')
@@ -86,10 +89,6 @@ export default function App() {
     fetchInvoices(statusFilter)
   }, [statusFilter, fetchInvoices])
 
-  function handleSelect(inv) {
-    setSelectedInvoice(inv)
-  }
-
   function handleFilterChange(f) {
     setStatusFilter(f)
     setSelectedInvoice(null)
@@ -125,42 +124,66 @@ export default function App() {
       <header className="app-header">
         <span style={{ fontSize: '1.2rem' }}>🧾</span>
         <h1>Invoice Processing Dashboard</h1>
+        <nav className="tab-nav">
+          <button
+            className={`tab-btn${activeTab === 'invoices' ? ' active' : ''}`}
+            onClick={() => setActiveTab('invoices')}
+          >
+            Invoices
+          </button>
+          <button
+            className={`tab-btn${activeTab === 'batches' ? ' active' : ''}`}
+            onClick={() => setActiveTab('batches')}
+          >
+            Batches
+          </button>
+        </nav>
         <span className="badge">AI Incident Observability</span>
       </header>
 
-      <div className="app-body">
-        <div className="col-left">
-          <UploadPanel onUploaded={() => { fetchInvoices(statusFilter); fetchBatches() }} />
-          <VendorPanel
-            vendors={vendors}
-            loading={vendorsLoading}
-            onCreated={fetchVendors}
+      {activeTab === 'invoices' && (
+        <div className="app-body body-invoices">
+          <div className="col-left">
+            <UploadPanel onUploaded={() => { fetchInvoices(statusFilter); fetchBatches() }} />
+            <VendorPanel
+              vendors={vendors}
+              loading={vendorsLoading}
+              onCreated={fetchVendors}
+            />
+          </div>
+          <InvoiceTable
+            invoices={invoices}
+            loading={invoicesLoading}
+            selectedId={selectedInvoice?.id}
+            onSelect={setSelectedInvoice}
+            onFilterChange={handleFilterChange}
+            onRefresh={handleRefresh}
           />
         </div>
+      )}
 
-        <InvoiceTable
-          invoices={invoices}
-          loading={invoicesLoading}
-          selectedId={selectedInvoice?.id}
-          onSelect={handleSelect}
-          onFilterChange={handleFilterChange}
-          onRefresh={handleRefresh}
-        />
-
-        <div className="col-right">
-          <BatchUploadsPanel
-            batches={batches}
-            loading={batchesLoading}
-            selectedBatchId={selectedBatch?.id}
-            onSelect={handleBatchSelect}
-          />
-          <BatchInvoicesPanel
-            batch={selectedBatch}
-            invoices={batchInvoices}
-            loading={batchInvoicesLoading}
-          />
+      {activeTab === 'batches' && (
+        <div className="app-body body-batches">
+          <div className="col-left">
+            <BatchUploadsPanel
+              batches={batches}
+              loading={batchesLoading}
+              selectedBatchId={selectedBatch?.id}
+              onSelect={handleBatchSelect}
+            />
+          </div>
+          <div className="col-batch-main">
+            <BatchInvoicesPanel
+              batch={selectedBatch}
+              invoices={batchInvoices}
+              loading={batchInvoicesLoading}
+            />
+            <EarningsPanel
+              batch={selectedBatch}
+            />
+          </div>
         </div>
-      </div>
+      )}
     </>
   )
 }

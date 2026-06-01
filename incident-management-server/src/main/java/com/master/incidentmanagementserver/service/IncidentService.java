@@ -1,5 +1,6 @@
 package com.master.incidentmanagementserver.service;
 
+import com.master.incidentmanagementserver.client.AgentClient;
 import com.master.incidentmanagementserver.dto.IncidentCreateRequest;
 import com.master.incidentmanagementserver.dto.IncidentDTO;
 import com.master.incidentmanagementserver.entity.Incident;
@@ -22,11 +23,14 @@ public class IncidentService {
 
     private final IncidentRepository incidentRepository;
     private final UserRepository userRepository;
+    private final AgentClient agentClient;
 
     public IncidentService(IncidentRepository incidentRepository,
-                           UserRepository userRepository) {
+                           UserRepository userRepository,
+                           AgentClient agentClient) {
         this.incidentRepository = incidentRepository;
         this.userRepository = userRepository;
+        this.agentClient = agentClient;
     }
 
     @Transactional(readOnly = true)
@@ -53,6 +57,7 @@ public class IncidentService {
         incident.setCreatedBy(user);
         Incident saved = incidentRepository.save(incident);
         log.info("Incident created: id={}, by={}", saved.getId(), username);
+        agentClient.triggerIncidentProcessing(saved.getId(), saved.getTitle(), saved.getDescription());
         return IncidentDTO.from(saved);
     }
 

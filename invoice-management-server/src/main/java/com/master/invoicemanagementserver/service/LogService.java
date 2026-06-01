@@ -4,6 +4,7 @@ import com.master.invoicemanagementserver.dto.ProcessingLogDTO;
 import com.master.invoicemanagementserver.repository.ProcessingLogRepository;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -16,13 +17,12 @@ public class LogService {
         this.logRepository = logRepository;
     }
 
-    public List<ProcessingLogDTO> getLogsForInvoice(String invoiceId) {
-        return logRepository.findByInvoiceIdOrderByTimestampAsc(invoiceId)
-                .stream().map(ProcessingLogDTO::from).collect(Collectors.toList());
-    }
-
-    public List<ProcessingLogDTO> getLogsForBatch(String batchUploadId) {
-        return logRepository.findByBatchUploadIdOrderByTimestampAsc(batchUploadId)
-                .stream().map(ProcessingLogDTO::from).collect(Collectors.toList());
+    public List<ProcessingLogDTO> getLogs(String keyword, LocalDateTime from, LocalDateTime to, String level) {
+        return logRepository.search(
+                (keyword != null && !keyword.isBlank()) ? keyword : null,
+                from,
+                to,
+                (level != null && !level.isBlank()) ? level : null
+        ).stream().map(ProcessingLogDTO::from).collect(Collectors.toList());
     }
 }

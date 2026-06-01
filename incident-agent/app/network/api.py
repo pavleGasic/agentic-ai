@@ -25,4 +25,5 @@ async def _run_agent(request: IncidentRequest):
         "incident_description": request.description,
         "batch_id": request.batch_id,
     })
-    post_comment(request.incident_id, result["final_report"])
+    visibility = result.get("final_report_visibility", "PUBLIC")
+    post_comment(request.incident_id, result["final_report"], visibility)

@@ -15,5 +15,5 @@ public class UploadResponseDTO {
     private int totalRows;
     private int successCount;
     private int failedCount;
-    private List<String> errors;
+    private String errorMessage;
 }

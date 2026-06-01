@@ -73,7 +73,7 @@ export default function IncidentDetailPage({ incidentId, role, username, onBack,
 
         <div className="messages-section">
           <h2 className="section-title">Messages</h2>
-          <MessageList messages={messages} />
+          <MessageList messages={messages} role={role} />
           <MessageForm incidentId={incidentId} onAdded={handleMessageAdded} />
         </div>
       </div>
