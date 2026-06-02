@@ -6,8 +6,6 @@ Each log contains:
 - level: ERROR | WARN | INFO
 - message: error description
 - module: system component
-- invoiceId: affected invoice
-- batchUploadId: batch identifier
 - stackTrace: optional Java stack trace
 - timestamp: event time
 
@@ -18,26 +16,39 @@ Your task:
 
 Classification rules:
 
-USER_ERROR + USER resolution:
+USER resolution:
 - parsing errors
 - invalid CSV format
 - missing fields
 - invalid input data
 
-BACKEND_ERROR + DEVELOPER resolution:
+DEVELOPER resolution:
 - exceptions
 - runtime crashes
 - null pointer exceptions
 - DB failures
-
-UNKNOWN_ERROR + DEVELOPER:
 - unclear cause or insufficient info
 
-IMPORTANT OUTPUT RULES:
-- resolution_type MUST be either "USER" or "DEVELOPER"
-- incident_type MUST be "USER_ERROR", "BACKEND_ERROR", or "UNKNOWN_ERROR"
+OUTPUT RULES (STRICT):
+
+- Output MUST be valid JSON ONLY
+- Do NOT include markdown, text, or explanations
+- Do NOT output "null" as a string under any circumstance
+- Use JSON null (without quotes) for missing values
+
+Fields:
+
+- resolution_type MUST be "USER" or "DEVELOPER"
+
 - suggested_user_actions:
-  - MUST be a STRING when incident_type = user_error
-  - MUST be empty string "" when BACKEND_ERROR or UNKNOWN_ERROR
-- if suggested_user_actions is provided, include detailed steps for fixing problem in list format, include all relevant details for solving user problem
-- if user issue is with file format, MUST include exact line/s of error/s and proposed solution
+  - MUST be null when resolution_type = "DEVELOPER"
+  - MUST be a detailed step-by-step string when resolution_type = "USER"
+  - ALWAYS include detailed explanation how to fix error
+
+- responsible_component:
+  - string if known
+  - null if unknown
+
+- responsible_method:
+  - string if known
+  - null if unknown

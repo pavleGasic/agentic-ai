@@ -5,8 +5,9 @@ Your task is to analyze the incident title and description and extract:
 1. business_context
 2. start_time
 3. end_time
+4. incident_analysis_status
 
-Return only structured JSON format with provided keys.
+Return ONLY valid JSON.
 
 BUSINESS CONTEXT
 
@@ -34,17 +35,73 @@ Rules:
 - Multiple pairs should be separated by commas.
 - If no business identifiers are found, return null.
 
-TIME RANGE
+TIME RANGE EXTRACTION RULES
 
-Extract start_time and end_time only if they can be reasonably inferred from the incident.
-Also add a small deviation to cover the relevant period.
+Extract start_time and end_time only when time information is explicitly or reasonably inferable.
 
-Examples:
-- "between 10:00 and 11:00" -> extract both times +- 1 hour
-- "today at 14:35" -> start_time=end_time=14:35 +- 1 hour
-- "yesterday afternoon" -> try to aproximate it
+You must treat time expressions in two categories:
 
-If a timestamp is ambiguous, leave it null.
+1. EXACT TIME POINTS (e.g. "at 14:35", "on 2026-06-02 14:35", "yesterday at 3pm")
+- If a specific time point is mentioned:
+  - start_time = inferred event start
+  - end_time = inferred event end
+  - If duration is not provided, do NOT expand time range
+  - Do NOT add arbitrary deviation or buffers
+
+2. TIME RANGES (e.g. "between X and Y", "from X to Y", "during the morning")
+- If a range is explicitly mentioned:
+  - Use the full range as provided
+  - You may normalize format to ISO-8601
+  - Do NOT extend beyond the given range unless explicitly stated
+
+3. DAY / PERIOD EXPRESSIONS (e.g. "today", "yesterday", "last week")
+- Convert to full calendar range:
+  - "today" -> full day (00:00:00Z to 23:59:59Z)
+  - "yesterday" -> previous full day
+  - "last week" -> full week range
+
+IMPORTANT:
+- Do NOT apply arbitrary time expansion or "deviation windows"
+- Only expand time ranges when explicitly defined by natural language (e.g. "morning", "afternoon")
+- If time is ambiguous, set start_time and end_time to null
+
+STATUS RULES
+
+Set incident_analysis_status according to the following rules:
+
+SUCCESS
+- At least one useful business_context value OR a valid time range was extracted.
+- A successful analysis does NOT require all fields to be populated.
+
+INSUFFICIENT_DATA
+- The incident is understandable but does not contain enough information
+  to extract business_context, start_time, or end_time.
+
+FAILURE
+- The incident text is corrupted, nonsensical, empty, or cannot be analyzed.
+- In the incident description and title information is not related to invoice management system.
+
+Output example:
+
+{
+  "business_context": "invoice:INV-S1-035",
+  "start_time": "2026-06-02T09:00:00Z",
+  "end_time": "2026-06-02T11:00:00Z",
+  "incident_analysis_status": "SUCCESS"
+}
+
+When a value is unknown, leave the field empty by using the schema null value.
+Do not generate the string "null".
+Do not generate "N/A".
+Do not generate empty strings.
+Example:
+
+{
+  "business_context": null,
+  "start_time": null,
+  "end_time": null,
+  "incident_analysis_status": "INSUFFICIENT_DATA"
+}
 
 INCIDENT TITLE:
 {incident_title}

@@ -14,13 +14,13 @@ public interface ProcessingLogRepository extends JpaRepository<ProcessingLog, Lo
   List<ProcessingLog> searchByBusinessContext(@Param("keyword") String keyword);
 
   @Query("""
-          SELECT l FROM ProcessingLog l
-          WHERE (:keyword IS NULL OR LOWER(l.businessContext) LIKE LOWER(CONCAT('%', :keyword, '%')))
-          AND (:from IS NULL OR l.timestamp >= :from)
-          AND (:to IS NULL OR l.timestamp <= :to)
-          AND (:level IS NULL OR l.level = :level)
-          ORDER BY l.timestamp ASC
-          """)
+        SELECT l FROM ProcessingLog l
+        WHERE (:keyword IS NULL OR LOWER(l.businessContext) LIKE LOWER(CONCAT('%', :keyword, '%')))
+        AND l.timestamp >= COALESCE(:from, l.timestamp)
+        AND l.timestamp <= COALESCE(:to, l.timestamp)
+        AND (:level IS NULL OR l.level = :level)
+        ORDER BY l.timestamp ASC
+    """)
   List<ProcessingLog> search(
           @Param("keyword") String keyword,
           @Param("from") LocalDateTime from,

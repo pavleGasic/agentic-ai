@@ -22,9 +22,7 @@ class LogAnalysisAgent:
         self.prompt = prompt_path.read_text()
     
     def analyze_logs(self, logs: list[dict]) -> LogAnalysisResult:
-        logs_message = HumanMessage(content=f"Logs for analysis: {logs}")
         system_message = SystemMessage(content=self.prompt)
+        logs_message = HumanMessage(content=f"Logs for analysis: {logs}")
         
-        return self.structured_llm.invoke(
-            [system_message, logs_message]
-        )
+        return self.structured_llm.invoke([system_message, logs_message])
