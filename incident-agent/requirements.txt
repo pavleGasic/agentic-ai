@@ -2,10 +2,11 @@ chromadb
 fastapi
 langchain
 langchain_community
-langchain-text-splitters
-langgraph
 langchain-groq
+langgraph
 python-dotenv
 pydantic
 requests
+tree-sitter
+tree-sitter-java
 uvicorn
