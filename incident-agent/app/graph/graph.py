@@ -96,8 +96,8 @@ def log_analysis_node(state: IncidentState):
     out = {
         "resolution_type": result.resolution_type,
         "confidence": result.confidence,
-        "responsible_component": result.responsible_component,
-        "responsible_method": result.responsible_method,
+        "responsible_components": result.responsible_components,
+        "responsible_methods": result.responsible_methods,
         "suggested_user_actions": result.suggested_user_actions,
     }
 
@@ -123,44 +123,36 @@ def user_resolution_node(state: IncidentState):
     suggested = state.get('suggested_user_actions', 'N/A')
     logger.info("user_resolution_node: suggested_actions=%s", suggested)
     return {
-        "final_report": f"User resolution recommended.\nSuggested action:\n{suggested}",
+        "final_report": f"Suggested action:\n{suggested}",
         "final_report_visibility": "PUBLIC"
     }
 
 
 def analyze_code_node(state: IncidentState):
-    logger.info("analyze_code_node start: affected_invoices=%s", state.get("affected_invoice_ids"))
-    try:
-        result: CodeAnalysisResult = code_agent.analyze_code(state)
-    except Exception as e:
-        logger.exception("analyze_code failed: %s", e)
-        return {
-            "responsible_component": None,
-            "responsible_method": None,
-            "error_type": None,
-            "code_analysis_reasoning": "",
-            "fix_suggestion": None
-        }
-
+    logger.info("analyze_code_node start: suspected_components=%s suspected_methods=%s logs_count=%s",
+                state.get("suspected_components"), state.get("suspected_methods"), len(state.get("logs") or [])) 
+    
+    result: CodeAnalysisResult = code_agent.analyze_code(state)
+    
     out = {
-        "responsible_component": result.responsible_component,
-        "responsible_method": result.responsible_method,
-        "error_type": result.error_type,
+        "responsible_components": result.responsible_components,
+        "responsible_methods": result.responsible_methods,
+        "error_types": result.error_types,
         "code_analysis_reasoning": result.reasoning,
         "fix_suggestion": result.fix_suggestion
     }
 
     logger.info(
-        "analyze_code_node result: component=%s method=%s error_type=%s",
-        out.get("responsible_component"), out.get("responsible_method"), out.get("error_type")
+        "analyze_code_node result: components=%s methods=%s error_types=%s",
+        out.get("responsible_components"), out.get("responsible_methods"), out.get("error_types")
     )
     return out
 
 
 def developer_node(state: IncidentState):
-    logger.info("developer_node: confidence=%s component=%s error_type=%s", state.get('confidence'), state.get('responsible_component'), state.get('error_type'))
+    logger.info("developer_node: confidence=%s components=%s error_types=%s", state.get('confidence'), state.get('responsible_components'), state.get('error_types'))
     return {
-        "final_report": f"Developer investigation recommended with confidence {state.get('confidence', 0.0):.2f}. Responsible component: {state.get('responsible_component', 'N/A')}, Error type: {state.get('error_type', 'N/A')}",
+        "final_report": f"Developer resolution recommended.\nResponsible components: {state.get('responsible_components')}\nResponsible methods: {state.get('responsible_methods')}\nError types: {state.get('error_types')}\nFix suggestion: {state.get('fix_suggestion')}\nReasoning: {state.get('code_analysis_reasoning')}",
         "final_report_visibility": "DEVELOPER_ONLY"
     }
 

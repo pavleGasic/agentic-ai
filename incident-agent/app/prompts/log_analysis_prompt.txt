@@ -27,6 +27,7 @@ DEVELOPER resolution:
 - runtime crashes
 - null pointer exceptions
 - DB failures
+- bad calculation in system
 - unclear cause or insufficient info
 
 OUTPUT RULES (STRICT):
@@ -45,10 +46,10 @@ Fields:
   - MUST be a detailed step-by-step string when resolution_type = "USER"
   - ALWAYS include detailed explanation how to fix error
 
-- responsible_component:
-  - string if known
+- responsible_components:
+  - list of string if known
   - null if unknown
 
-- responsible_method:
-  - string if known
+- responsible_methods:
+  - list of string if known
   - null if unknown

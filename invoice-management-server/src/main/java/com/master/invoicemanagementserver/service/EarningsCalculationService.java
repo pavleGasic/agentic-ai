@@ -18,10 +18,10 @@ import java.util.UUID;
 @Service
 public class EarningsCalculationService {
 
-    private static final BigDecimal THRESHOLD_LOW  = new BigDecimal("2000");
-    private static final BigDecimal THRESHOLD_HIGH = new BigDecimal("4000");
+    private static final BigDecimal THRESHOLD_LOW  = new BigDecimal("5000");
+    private static final BigDecimal THRESHOLD_HIGH = new BigDecimal("8000");
     private static final BigDecimal RATE_LOW       = new BigDecimal("0.10");
-    private static final BigDecimal RATE_HIGH      = new BigDecimal("0.20");
+    private static final BigDecimal RATE_HIGH      = new BigDecimal("0.25");
 
     private final BatchUploadRepository batchUploadRepository;
     private final VendorRepository vendorRepository;

@@ -14,8 +14,8 @@ class IncidentState(TypedDict):
     resolution_type: Literal["USER", "DEVELOPER"]
     confidence: Optional[float]
     classification_reasoning: Optional[str]
-    responsible_component: Optional[str]
-    responsible_method: Optional[str]
+    responsible_components: Optional[list[str]]
+    responsible_methods: Optional[list[str]]
     suggested_user_actions: Optional[str] = None
 
     error_type: Optional[str]
