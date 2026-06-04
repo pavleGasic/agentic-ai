@@ -10,9 +10,11 @@ JAVA_SRC = "../invoice-management-server/src/main/java/com/master/invoicemanagem
 CHROMA_DIR = os.path.join(os.path.dirname(__file__), "chroma_db")
 
 def to_document(method: dict, file_path: str, layer: str) -> Document:
+    fields_section = f"Fields:\n{method['fields']}\n\n" if method['fields'] else ""
     content = (
         f"Class: {method['class_name']}\n"
         f"Method: {method['method_name']}\n"
+        f"{fields_section}"
         f"Layer: {layer}\n"
         f"{method['source']}"
     )

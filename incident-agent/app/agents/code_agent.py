@@ -1,16 +1,20 @@
 import json
+import re
 from pathlib import Path
+import logging
 
 from langchain_groq import ChatGroq
-from langchain_core.messages import HumanMessage
-from langchain.agents import create_agent
+from langchain_core.messages import HumanMessage, SystemMessage
+from langgraph.prebuilt import create_react_agent
 
 from app.config import (GROQ_API_KEY, MODEL_NAME, TEMPERATURE)
 from app.models.code_analysis_result import CodeAnalysisResult
 from app.graph.state import IncidentState
 from app.tools.code_tool import search_code
 from app.tools.business_knowledge_tool import search_business_knowledge
-import logging
+
+MAX_ITERATIONS = 5
+
 
 logger = logging.getLogger(__name__)
 if not logging.getLogger().handlers:
@@ -18,8 +22,7 @@ if not logging.getLogger().handlers:
         level=logging.INFO,
         format="%(asctime)s %(levelname)s [%(name)s] %(message)s"
     )
-
-
+    
 class CodeAgent:
     def __init__(self):
         llm = ChatGroq(api_key=GROQ_API_KEY, model=MODEL_NAME, temperature=TEMPERATURE)
@@ -28,9 +31,9 @@ class CodeAgent:
             / "prompts"
             / "code_analysis_prompt.txt"
         )
-        prompt = prompt_path.read_text()
+        self.system_prompt = prompt_path.read_text()
         
-        self.agent = create_agent(llm, tools=[search_code, search_business_knowledge], system_prompt=prompt)
+        self.agent = create_react_agent(llm, tools=[search_code, search_business_knowledge])
         
     def analyze_code(self, state: IncidentState) -> CodeAnalysisResult:
         logs = state.get("logs") or []
@@ -41,17 +44,39 @@ class CodeAgent:
         
         human_message = (
             f"Logs:\n{logs_text}\n\n"
+            f"Incident title: {state.get('incident_title', '')}\n"
+            f"Incident description: {state.get('incident_description', '')}\n"
             f"Suspected components: {state.get('suspected_components', [])}\n"
             f"Suspected methods: {state.get('suspected_methods', [])}\n\n"
             "Use the available tools iteratively to gather enough context, "
             "then produce the final JSON answer."
         )
         
-        result = self.agent.invoke({
-            "messages": [HumanMessage(content=human_message)]})
+        try:
+            result = self.agent.invoke(
+                {
+                    "messages": [
+                        SystemMessage(content=self.system_prompt),
+                        HumanMessage(content=human_message)
+                    ],
+                },
+                config={"recursion_limit": MAX_ITERATIONS}
+            )
+            
+            logger.info("CodeAgent raw result: %s", result)
+            
+            last_content = result["messages"][-1].content
+            
+            logger.info("CodeAgent analyze_code result: %s", last_content)
+            
+            data = json.loads(last_content)
+            return CodeAnalysisResult(**data)
         
-        logger.info("CodeAgent analyze_code result: %s", result)
-        
-        last_message = result["messages"][-1].content
-        data = json.loads(last_message)
-        return CodeAnalysisResult(**data)
+        except Exception as e:
+            return CodeAnalysisResult(
+                error_types=[str(e)],
+                responsible_components=state.get("responsible_components", []),
+                responsible_methods=state.get("responsible_methods", []),
+                fix_suggestion="Failed to analyze code. Please check the logs and suspected components/methods for more details.",
+                reasoning=f"An error occurred during code analysis: {str(e)}"
+            )

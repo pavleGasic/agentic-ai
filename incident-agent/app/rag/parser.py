@@ -13,6 +13,17 @@ def get_class_name(root, source: bytes) -> str:
                     return source[child.start_byte:child.end_byte].decode()
     return "Unknown"
 
+def extract_fields(class_body, source: bytes, class_name: str) -> list[dict]:
+    fields = []
+    for member in class_body.children:
+        if member.type == "field_declaration":
+            field_source = source[member.start_byte:member.end_byte].decode()
+            fields.append({
+                "class_name": class_name,
+                "field_source": field_source
+            })
+    return fields
+
 def extract_methods(root, source: bytes, class_name: str) -> list[dict]:
     methods = []
     
@@ -20,9 +31,13 @@ def extract_methods(root, source: bytes, class_name: str) -> list[dict]:
         if node.type == "class_declaration":
             for child in node.children:
                 if child.type == "class_body":
+                    fields = extract_fields(child, source, class_name)
+                    fields_text = "\n".join(field["field_source"] for field in fields)
+                    
                     for member in child.children:
                         if member.type == "method_declaration":
                             method = extract_method(member, source, class_name)
+                            method["fields"] = fields_text
                             methods.append(method)
     return methods
 
@@ -42,7 +57,8 @@ def extract_method(node, source: bytes, class_name: str) -> dict:
         "class_name": class_name,
         "method_name": method_name,
         "parameters": parameters,
-        "source": method_source
+        "source": method_source,
+        "fields": ""
     }
     
 def detect_layer(file_path: str) -> str:
