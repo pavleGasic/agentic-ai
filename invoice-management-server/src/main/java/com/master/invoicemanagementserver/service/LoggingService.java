@@ -2,7 +2,11 @@ package com.master.invoicemanagementserver.service;
 
 import com.master.invoicemanagementserver.entity.ProcessingLog;
 import com.master.invoicemanagementserver.repository.ProcessingLogRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -12,29 +16,36 @@ import java.time.LocalDateTime;
 public class LoggingService {
 
     private final ProcessingLogRepository logRepository;
+    private LoggingService self;
 
     public LoggingService(ProcessingLogRepository logRepository) {
         this.logRepository = logRepository;
     }
 
+    @Autowired
+    public void setSelf(@Lazy LoggingService self) {
+        this.self = self;
+    }
+
     public void info(String module, String businessContext, String message) {
-        persist("INFO", module, businessContext, message, null);
+        self.persist("INFO", module, businessContext, message, null);
     }
 
     public void warn(String module, String businessContext, String message) {
-        persist("WARN", module, businessContext, message, null);
+        self.persist("WARN", module, businessContext, message, null);
     }
 
     public void error(String module, String businessContext, String message, Throwable cause) {
         String stackTrace = cause != null ? stackTraceToString(cause) : null;
-        persist("ERROR", module, businessContext, message, stackTrace);
+        self.persist("ERROR", module, businessContext, message, stackTrace);
     }
 
     public void error(String module, String businessContext, String message) {
-        persist("ERROR", module, businessContext, message, null);
+        self.persist("ERROR", module, businessContext, message, null);
     }
 
-    private void persist(String level, String module, String businessContext, String message, String stackTrace) {
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void persist(String level, String module, String businessContext, String message, String stackTrace) {
         var entry = new ProcessingLog();
         entry.setLevel(level);
         entry.setModule(module);

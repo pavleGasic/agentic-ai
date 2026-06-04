@@ -44,35 +44,42 @@ public class EarningsCalculationService {
     @Transactional
     public List<VendorEarningDTO> calculate(UUID batchId) {
         var batchUploadId = batchId.toString();
-        var businessContext = "batchUploadId:" + batchUploadId;
+        var batchUpload = batchUploadRepository.getReferenceById(batchId);
+        var businessContext = "file:" + batchUpload.getImportFileName() + ", " + "batchUploadId:" + batchUploadId;
 
         if (!batchUploadRepository.existsById(batchId)) {
             loggingService.error("EarningsCalculationService", businessContext, "Calculation aborted — batch not found: " + batchUploadId);
             throw new InvoiceValidationException("Batch not found: " + batchUploadId);
         }
+        try {
 
-        var vendorCodes = invoiceRepository.findDistinctVendorCodesByBatchUploadId(batchUploadId);
-        if (vendorCodes.isEmpty()) {
-            loggingService.warn("EarningsCalculationService", businessContext, "No processed invoices found for batch, skipping calculation");
-            return List.of();
+            var vendorCodes = invoiceRepository.findDistinctVendorCodesByBatchUploadId(batchUploadId);
+            if (vendorCodes.isEmpty()) {
+                loggingService.warn("EarningsCalculationService", businessContext, "No processed invoices found for batch, skipping calculation");
+                return List.of();
+            }
+
+            loggingService.info("EarningsCalculationService", businessContext,
+                    "Earnings calculation started — overwriting previous results, vendors: " + vendorCodes);
+
+            earningRepository.deleteByBatchUploadId(batchUploadId);
+
+            var results = vendorCodes.stream()
+                    .map(vendorCode -> calculateForVendor(batchUploadId, vendorCode))
+                    .toList();
+
+            var totalBase  = results.stream().map(VendorEarningDTO::baseAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+            var totalFinal = results.stream().map(VendorEarningDTO::totalAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+            loggingService.info("EarningsCalculationService", businessContext,
+                    "Earnings calculation completed — vendors: " + results.size()
+                            + ", totalBase: " + totalBase + ", totalFinal: " + totalFinal);
+
+            return results;
+        } catch (Exception e) {
+            loggingService.error("EarningsCalculationService", businessContext,
+                    "Unexpected error during earnings calculation:" + e.getMessage(), e);
+            throw e;
         }
-
-        loggingService.info("EarningsCalculationService", businessContext,
-                "Earnings calculation started — overwriting previous results, vendors: " + vendorCodes);
-
-        earningRepository.deleteByBatchUploadId(batchUploadId);
-
-        var results = vendorCodes.stream()
-                .map(vendorCode -> calculateForVendor(batchUploadId, vendorCode))
-                .toList();
-
-        var totalBase  = results.stream().map(VendorEarningDTO::baseAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
-        var totalFinal = results.stream().map(VendorEarningDTO::totalAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
-        loggingService.info("EarningsCalculationService", businessContext,
-                "Earnings calculation completed — vendors: " + results.size()
-                + ", totalBase: " + totalBase + ", totalFinal: " + totalFinal);
-
-        return results;
     }
 
     private VendorEarningDTO calculateForVendor(String batchUploadId, String vendorCode) {

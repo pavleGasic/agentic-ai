@@ -14,7 +14,7 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     boolean existsByInvoiceId(String invoiceId);
     List<Invoice> findByBatchUploadId(String batchUploadId);
 
-    @Query("SELECT COALESCE(SUM(i.amount), 0) FROM Invoice i WHERE i.batchUploadId = :batchUploadId AND i.vendor.vendorCode = :vendorCode AND i.status = 'PROCESSED'")
+    @Query("SELECT SUM(i.amount) FROM Invoice i WHERE i.batchUploadId = :batchUploadId AND i.vendor.vendorCode = :vendorCode AND i.status = 'PROCESSED'")
     BigDecimal sumProcessedAmountByBatchAndVendor(@Param("batchUploadId") String batchUploadId, @Param("vendorCode") String vendorCode);
 
     @Query("SELECT DISTINCT i.vendor.vendorCode FROM Invoice i WHERE i.batchUploadId = :batchUploadId AND i.status = 'PROCESSED' AND i.vendor IS NOT NULL")

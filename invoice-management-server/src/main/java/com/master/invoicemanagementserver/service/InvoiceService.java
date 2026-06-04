@@ -19,6 +19,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -183,7 +184,7 @@ public class InvoiceService {
         var invoice = new Invoice();
         invoice.setInvoiceId(row.getInvoiceId());
         invoice.setCustomerName(row.getCustomerName());
-        invoice.setAmount(new BigDecimal(row.getAmount()));
+        invoice.setAmount(Optional.ofNullable(row.getAmount()).map(BigDecimal::new).orElse(null));
         invoice.setCurrency(row.getCurrency().toUpperCase());
         invoice.setIssueDate(LocalDate.parse(row.getIssueDate()));
         invoice.setStatus(InvoiceStatus.PENDING);

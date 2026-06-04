@@ -68,20 +68,19 @@ public class CsvParser {
                 continue;
             }
 
-            var invoiceId    = row[idxInvoiceId].trim();
-            var customerName = row[idxCustomerName].trim();
-            var amount       = row[idxAmount].trim();
-            var currency     = row[idxCurrency].strip();
-            var issueDate    = row[idxIssueDate].trim();
-            var vendorCode   = row[idxVendorCode].trim();
+            var invoiceId    = row[idxInvoiceId].isEmpty() ? null : row[idxInvoiceId].trim();
+            var customerName = row[idxCustomerName].isEmpty() ? null : row[idxCustomerName].trim();
+            var amount       = row[idxAmount].isEmpty() ? null : row[idxAmount].trim();
+            var currency     = row[idxCurrency].isEmpty() ? null : row[idxCurrency].trim();
+            var issueDate    = row[idxIssueDate].isEmpty() ? null : row[idxIssueDate].trim();
+            var vendorCode   = row[idxVendorCode].isEmpty() ? null : row[idxVendorCode].trim();
 
             var rowErrors = new ArrayList<String>();
-            if (invoiceId.isEmpty())    rowErrors.add("invoice_id is empty");
-            if (customerName.isEmpty()) rowErrors.add("customer_name is empty");
-            if (amount.isEmpty())       rowErrors.add("amount is empty");
-            if (vendorCode.isEmpty())   rowErrors.add("vendor_code is empty");
-            if (!currency.matches("[A-Z]{3}")) rowErrors.add("invalid currency '" + currency + "' (must be 3 uppercase letters)");
-            if (!isValidDate(issueDate)) rowErrors.add("invalid date format '" + issueDate + "' (expected yyyy-MM-dd)");
+            if (invoiceId == null)    rowErrors.add("invoice_id is empty");
+            if (customerName == null) rowErrors.add("customer_name is empty");
+            if (vendorCode == null)   rowErrors.add("vendor_code is empty");
+            if (currency == null || !currency.matches("[A-Z]{3}")) rowErrors.add("invalid currency '" + currency + "' (must be 3 uppercase letters)");
+            if (issueDate == null || !isValidDate(issueDate)) rowErrors.add("invalid date format '" + issueDate + "' (expected yyyy-MM-dd)");
 
             if (!rowErrors.isEmpty()) {
                 errors.add(new ParseError(invoiceId, "Row " + rowNum + " [" + invoiceId + "]: " + String.join("; ", rowErrors)));

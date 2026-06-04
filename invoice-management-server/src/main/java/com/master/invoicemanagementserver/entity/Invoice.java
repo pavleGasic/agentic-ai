@@ -26,7 +26,7 @@ public class Invoice {
     @Column(nullable = false)
     private String customerName;
 
-    @Column(nullable = false, precision = 19, scale = 4)
+    @Column(precision = 19, scale = 4)
     private BigDecimal amount;
 
     @Column(nullable = false, length = 3)

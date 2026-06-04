@@ -17,10 +17,11 @@ Your task:
 Classification rules:
 
 USER resolution:
-- parsing errors
-- invalid CSV format
-- missing fields
-- invalid input data
+- it is ALWAYS connected to import phase, but NEVER with calculation earnings
+- parsing errors during import
+- invalid CSV format during import
+- missing fields during import
+- invalid input data during import
 
 DEVELOPER resolution:
 - exceptions
@@ -28,6 +29,7 @@ DEVELOPER resolution:
 - null pointer exceptions
 - DB failures
 - bad calculation in system
+- exceptions during calculation
 - unclear cause or insufficient info
 
 OUTPUT RULES (STRICT):
@@ -45,6 +47,7 @@ Fields:
   - MUST be null when resolution_type = "DEVELOPER"
   - MUST be a detailed step-by-step string when resolution_type = "USER"
   - ALWAYS include detailed explanation how to fix error
+  - pay attention that this message will end to customer, and DO NOT include any technical detailed in it
 
 - responsible_components:
   - list of string if known

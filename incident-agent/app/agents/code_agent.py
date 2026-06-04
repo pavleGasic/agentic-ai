@@ -1,10 +1,8 @@
-import json
-import re
 from pathlib import Path
 import logging
 
 from langchain_groq import ChatGroq
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, ToolMessage
 from langgraph.prebuilt import create_react_agent
 
 from app.config import (GROQ_API_KEY, MODEL_NAME, TEMPERATURE)
@@ -31,9 +29,10 @@ class CodeAgent:
             / "prompts"
             / "code_analysis_prompt.txt"
         )
-        self.system_prompt = prompt_path.read_text()
+        system_prompt = prompt_path.read_text()
         
-        self.agent = create_react_agent(llm, tools=[search_code, search_business_knowledge])
+        self.agent = create_react_agent(llm, tools=[search_code, search_business_knowledge], prompt=system_prompt)
+        self.structured_llm = llm.with_structured_output(CodeAnalysisResult)
         
     def analyze_code(self, state: IncidentState) -> CodeAnalysisResult:
         logs = state.get("logs") or []
@@ -53,25 +52,34 @@ class CodeAgent:
         )
         
         try:
-            result = self.agent.invoke(
+            agent_result = self.agent.invoke(
                 {
                     "messages": [
-                        SystemMessage(content=self.system_prompt),
                         HumanMessage(content=human_message)
                     ],
                 },
                 config={"recursion_limit": MAX_ITERATIONS}
             )
             
-            logger.info("CodeAgent raw result: %s", result)
+            tool_context = "\n\n".join(
+                msg.content
+                for msg in agent_result["messages"]
+                if isinstance(msg, ToolMessage)
+            )
             
-            last_content = result["messages"][-1].content
+            logger.info("CodeAgent collected tool context (%d chars)", len(tool_context))
             
-            logger.info("CodeAgent analyze_code result: %s", last_content)
+            final_prompt = (
+                f"Logs:\n{logs_text}\n\n"
+                f"Incident title: {state.get('incident_title', '')}\n"
+                f"Incident description: {state.get('incident_description', '')}\n"
+                f"Returned tool context:\n{tool_context}\n\n"
+                "Based on the above, produce the stuctured JSON analysis."
+                "In reasoning field describe the proposed fix with plain text and inline code only - "
+                "do NOT use markdown code blocks or triple brackets anywhere in your response"
+            )
             
-            data = json.loads(last_content)
-            return CodeAnalysisResult(**data)
-        
+            return self.structured_llm.invoke(final_prompt)
         except Exception as e:
             return CodeAnalysisResult(
                 error_types=[str(e)],
